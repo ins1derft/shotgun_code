@@ -14,6 +14,10 @@ export function ListFiles(arg1) {
   return window['go']['main']['App']['ListFiles'](arg1);
 }
 
+export function ListDirectory(arg1) {
+  return window['go']['main']['App']['ListDirectory'](arg1);
+}
+
 export function RequestShotgunContextGeneration(arg1, arg2) {
   return window['go']['main']['App']['RequestShotgunContextGeneration'](arg1, arg2);
 }

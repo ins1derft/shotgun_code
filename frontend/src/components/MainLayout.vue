@@ -15,6 +15,7 @@
         @toggle-gitignore="toggleGitignoreHandler"
         @toggle-custom-ignore="toggleCustomIgnoreHandler"
         @toggle-exclude="toggleExcludeNode"
+        @load-children="handleLoadNodeChildren"
         @custom-rules-updated="handleCustomRulesUpdated"
         @add-log="({message, type}) => addLog(message, type)" />
       <CentralPanel :current-step="currentStep" 
@@ -55,7 +56,7 @@ import HorizontalStepper from './HorizontalStepper.vue';
 import LeftSidebar from './LeftSidebar.vue';
 import CentralPanel from './CentralPanel.vue';
 import BottomConsole from './BottomConsole.vue';
-import { ListFiles, RequestShotgunContextGeneration, SelectDirectory as SelectDirectoryGo, StartFileWatcher, StopFileWatcher, SetUseGitignore, SetUseCustomIgnore, SplitShotgunDiff } from '../../wailsjs/go/main/App';
+import { ListDirectory, ListFiles, RequestShotgunContextGeneration, SelectDirectory as SelectDirectoryGo, StartFileWatcher, StopFileWatcher, SetUseGitignore, SetUseCustomIgnore, SplitShotgunDiff } from '../../wailsjs/go/main/App';
 import { EventsOn, Environment } from '../../wailsjs/runtime/runtime';
 
 const currentStep = ref(1);
@@ -170,6 +171,26 @@ async function loadFileTree(dirPath) {
   }
 }
 
+async function handleLoadNodeChildren(node) {
+	if (!node || !node.isDir || node.loadingChildren) return;
+	if (node.childrenLoaded && !node.lazyLoadChildren) return;
+	node.loadingChildren = true;
+	try {
+		const children = await ListDirectory(node.path);
+		node.children = mapDataToTreeRecursive(children || [], node);
+		node.childrenLoaded = true;
+		node.lazyLoadChildren = false;
+		node.expanded = true;
+		updateAllNodesExcludedState(fileTree.value);
+	} catch (err) {
+		const errorMsg = `Failed to load contents of ${node.relPath || node.name}: ${err?.message || err}`;
+		addLog(errorMsg, 'error', 'bottom');
+		console.error(errorMsg);
+	} finally {
+		node.loadingChildren = false;
+	}
+}
+
 function calculateNodeExcludedState(node) {
   const manualToggle = manuallyToggledNodes.get(node.relPath);
   if (manualToggle !== undefined) return manualToggle;
@@ -195,11 +216,15 @@ function mapDataToTreeRecursive(nodes, parent) {
   if (!nodes) return [];
   return nodes.map(node => {
     const isRootNode = parent === null;
+    const hasPreloadedChildren = Array.isArray(node.children) && node.children.length > 0;
     const reactiveNode = reactive({
       ...node,
       expanded: node.isDir ? isRootNode : undefined,
       parent: parent,
-      children: [] 
+      children: [],
+      childrenLoaded: hasPreloadedChildren,
+      lazyLoadChildren: !!node.lazyLoadChildren,
+      loadingChildren: false
     });
     reactiveNode.excluded = calculateNodeExcludedState(reactiveNode);
 

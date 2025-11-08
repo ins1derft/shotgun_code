@@ -9,6 +9,8 @@ export function GetCustomPromptRules():Promise<string>;
 
 export function ListFiles(arg1:string):Promise<Array<main.FileNode>>;
 
+export function ListDirectory(arg1:string):Promise<Array<main.FileNode>>;
+
 export function RequestShotgunContextGeneration(arg1:string,arg2:Array<string>):Promise<void>;
 
 export function SelectDirectory():Promise<string>;

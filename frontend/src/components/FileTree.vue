@@ -2,8 +2,9 @@
   <ul class="file-tree">
     <li v-for="node in nodes" :key="node.path" :class="{ 'excluded-node': node.excluded }">
       <div class="node-item" :style="{ 'padding-left': depth * 20 + 'px' }">
-        <span v-if="node.isDir" @click="toggleExpand(node)" class="toggler">
-          {{ node.expanded ? '▼' : '▶' }}
+        <span v-if="node.isDir" @click="toggleExpand(node)" class="toggler" :title="node.lazyLoadChildren && !node.childrenLoaded ? 'Load folder contents' : 'Toggle folder'">
+          <span v-if="node.loadingChildren" class="loader" aria-label="Loading">⟳</span>
+          <span v-else>{{ node.expanded ? '▼' : '▶' }}</span>
         </span>
         <span v-else class="item-spacer"></span>
         
@@ -23,6 +24,7 @@
         :project-root="projectRoot"
         :depth="depth + 1"
         @toggle-exclude="emitToggleExclude"
+        @load-children="emitLoadChildren"
       />
     </li>
   </ul>
@@ -44,12 +46,17 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['toggle-exclude']);
+const emit = defineEmits(['toggle-exclude', 'load-children']);
 
 function toggleExpand(node) {
-  if (node.isDir) {
-    node.expanded = !node.expanded;
+  if (!node.isDir) return;
+  if (node.lazyLoadChildren && !node.childrenLoaded) {
+    if (!node.loadingChildren) {
+      emitLoadChildren(node);
+    }
+    return;
   }
+  node.expanded = !node.expanded;
 }
 
 function handleCheckboxChange(node) {
@@ -59,6 +66,10 @@ function handleCheckboxChange(node) {
 
 function emitToggleExclude(node) {
     emit('toggle-exclude', node); // Bubble up the event
+}
+
+function emitLoadChildren(node) {
+    emit('load-children', node);
 }
 
 // A node is effectively excluded if one of its PARENTS is.
@@ -118,6 +129,22 @@ function isEffectivelyExcludedByParent(node) {
 }
 .exclude-checkbox:disabled {
     cursor: not-allowed;
+}
+
+.loader {
+  display: inline-block;
+  width: 20px;
+  text-align: center;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 </style>

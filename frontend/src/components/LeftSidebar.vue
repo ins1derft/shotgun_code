@@ -47,6 +47,7 @@
             :nodes="fileTreeNodes" 
             :project-root="projectRoot"
             @toggle-exclude="(node) => $emit('toggle-exclude', node)"
+            @load-children="(node) => $emit('load-children', node)"
         />
         <p v-else-if="projectRoot && !loadingError" class="p-2 text-xs text-gray-500">Loading tree...</p>
         <p v-else-if="!projectRoot" class="p-2 text-xs text-gray-500">Select a project folder to see files.</p>
@@ -101,7 +102,7 @@ const props = defineProps({
   loadingError: { type: String, default: '' },
 });
 
-const emit = defineEmits(['navigate', 'select-folder', 'toggle-gitignore', 'toggle-custom-ignore', 'toggle-exclude', 'custom-rules-updated', 'add-log']);
+const emit = defineEmits(['navigate', 'select-folder', 'toggle-gitignore', 'toggle-custom-ignore', 'toggle-exclude', 'load-children', 'custom-rules-updated', 'add-log']);
 
 const isCustomRulesModalVisible = ref(false);
 const currentCustomRulesForModal = ref('');
