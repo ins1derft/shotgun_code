@@ -71,6 +71,7 @@ const centralPanelRef = ref(null);
 const bottomConsoleRef = ref(null);
 const MIN_CONSOLE_HEIGHT = 50;
 const consoleHeight = ref(MIN_CONSOLE_HEIGHT); // Initial height in pixels
+const defaultNodesExcluded = true; // Nothing is selected until the user explicitly includes items
 
 function addLog(message, type = 'info', targetConsole = 'bottom') {
   const logEntry = {
@@ -174,6 +175,19 @@ function calculateNodeExcludedState(node) {
   if (manualToggle !== undefined) return manualToggle;
   if (useGitignore.value && node.isGitignored) return true;
   if (useCustomIgnore.value && node.isCustomIgnored) return true;
+  return defaultNodesExcluded;
+}
+
+function hasAnyIncludedNodes(nodes) {
+  if (!nodes || nodes.length === 0) return false;
+  for (const node of nodes) {
+    if (!node.excluded) {
+      return true;
+    }
+    if (node.children && node.children.length > 0 && hasAnyIncludedNodes(node.children)) {
+      return true;
+    }
+  }
   return false;
 }
 
@@ -230,9 +244,9 @@ function _updateAllNodesExcludedStateRecursive(nodesToUpdate, parentIsVisuallyEx
       // If there's a manual toggle, it dictates the state.
       node.excluded = manualToggle;
     } else {
-      // If not manually toggled, it's excluded if a rule matches OR if its parent is visually excluded.
-      // This establishes the default inherited exclusion for visual purposes.
-      node.excluded = isExcludedByRule || parentIsVisuallyExcluded;
+      // If not manually toggled, it's excluded if a rule matches, its parent is visually excluded,
+      // or because we default to an empty selection until the user picks files/folders.
+      node.excluded = isExcludedByRule || parentIsVisuallyExcluded || defaultNodesExcluded;
     }
 
      if (node.children && node.children.length > 0) {
@@ -271,6 +285,14 @@ function debouncedTriggerShotgunContextGeneration() {
 
   if (isFileTreeLoading.value) {
     addLog("Debounced trigger skipped: file tree is loading.", 'debug', 'bottom');
+    isGeneratingContext.value = false;
+    return;
+  }
+
+  if (!hasAnyIncludedNodes(fileTree.value)) {
+    // Nothing selected yet, wait for the user to include files/folders before generating context.
+    shotgunPromptContext.value = '';
+    generationProgressData.value = { current: 0, total: 0 };
     isGeneratingContext.value = false;
     return;
   }

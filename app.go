@@ -21,7 +21,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-const maxOutputSizeBytes = 10_000_000 // 10MB
+const maxOutputSizeBytes = 200_000_000 // 200MB
 var ErrContextTooLong = errors.New("context is too long")
 
 //go:embed ignore.glob
